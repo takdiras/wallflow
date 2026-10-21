@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wallflow</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="backdrop"><div class="backdrop-img" id="backdrop"></div><div class="backdrop-tint"></div></div>
+
+  <header class="titlebar" data-tauri-drag-region>
+    <div class="brand" data-tauri-drag-region>
+      <img src="icon.png" alt="" width="18" height="18" />
+      <span data-tauri-drag-region>Wallflow</span>
+    </div>
+    <div class="win-controls">
+      <button class="win-btn" id="win-min" title="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+      <button class="win-btn" id="win-max" title="Maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1"/></svg></button>
+      <button class="win-btn close" id="win-close" title="Hide to tray"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="sidebar glass">
+      <button class="nav active" data-view="now"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg><span>Now</span></button>
+      <button class="nav" data-view="discover"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Discover</span></button>
+      <button class="nav" data-view="rotation"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg><span>Rotation</span></button>
+      <button class="nav" data-view="history"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>History</span></button>
+      <div class="spacer"></div>
+      <button class="nav" data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
+    </nav>
+
+    <main class="content">
+      <!-- NOW -->
+      <section class="view active" id="view-now">
+        <div class="hero glass">
+          <div class="hero-img" id="hero-img">
+            <div class="empty-hero" id="empty-hero">
+              <p>No wallpaper yet.</p>
+              <p class="muted">Press Next for a random one from your categories, or pick one in Discover.</p>
+            </div>
+            <div class="spinner" id="hero-spinner"></div>
+          </div>
+          <div class="hero-bar">
+            <div class="meta">
+              <div class="title" id="now-title">—</div>
+              <div class="muted small" id="now-credit"></div>
+            </div>
+            <div class="controls">
+              <span class="swatch" id="now-swatch" title="Accent colour"></span>
+              <button class="btn icon" id="btn-prev" title="Previous"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <button class="btn primary" id="btn-next"><span>Next</span><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="chips-row">
+          <div class="pill glass" id="pill-rotate"></div>
+          <div class="pill glass" id="pill-cats"></div>
+          <div class="pill glass" id="pill-count"></div>
+        </div>
+      </section>
+
+      <!-- DISCOVER -->
+      <section class="view" id="view-discover">
+        <div class="toolbar">
+          <form class="search glass" id="search-form">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <input id="search" placeholder="Search wallpapers… leave empty for recommendations" autocomplete="off" />
+          </form>
+          <div class="segmented glass" id="source-seg">
+            <button data-src="" class="on">All</button>
+            <button data-src="wallhaven">Wallhaven</button>
+            <button data-src="bing">Bing</button>
+            <button data-src="unsplash">Unsplash</button>
+            <button data-src="pexels">Pexels</button>
+          </div>
+        </div>
+        <div class="quick" id="quick-tags"></div>
+        <div class="grid" id="grid"></div>
+        <div class="center"><button class="btn ghost" id="load-more" hidden>Load more</button></div>
+        <div class="empty glass" id="discover-empty" hidden></div>
+      </section>
+
+      <!-- ROTATION -->
+      <section class="view" id="view-rotation">
+        <h2>Rotation</h2>
+        <div class="card glass">
+          <h3>Categories</h3>
+          <p class="muted small">Random wallpapers are picked from these topics.</p>
+          <div class="tags" id="cat-tags"></div>
+          <form class="add-tag" id="cat-form">
+            <input id="cat-input" placeholder="Add a category, e.g. ocean, city night, minimal" />
+            <button class="btn" type="submit">Add</button>
+          </form>
+          <div class="suggest" id="cat-suggest"></div>
+        </div>
+        <div class="card glass">
+          <div class="row">
+            <div><h3>Auto-rotate</h3><p class="muted small">Change the wallpaper on a timer.</p></div>
+            <label class="switch"><input type="checkbox" id="opt-rotate" /><span></span></label>
+          </div>
+          <div class="row">
+            <div><h4>Every</h4></div>
+            <select id="opt-interval">
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="180">3 hours</option>
+              <option value="360">6 hours</option>
+              <option value="720">12 hours</option>
+              <option value="1440">1 day</option>
+              <option value="10080">1 week</option>
+            </select>
+          </div>
+          <div class="row">
+            <div><h3>Start with Windows</h3><p class="muted small">Run quietly in the tray when you sign in.</p></div>
+            <label class="switch"><input type="checkbox" id="opt-autostart" /><span></span></label>
+          </div>
+          <div class="row">
+            <div><h3>New wallpaper on startup</h3><p class="muted small">Pick a fresh one every time Windows starts.</p></div>
+            <label class="switch"><input type="checkbox" id="opt-startup-change" /><span></span></label>
+          </div>
+        </div>
+        <div class="card glass">
+          <h3>Sources</h3>
+          <p class="muted small">Wallhaven and Bing work without a key. Bing has no categories, so rotation only uses it when it's the only source.</p>
+          <div class="row"><div><h4>Unsplash</h4><p class="muted small">Needs an API key</p></div><label class="switch"><input type="checkbox" id="opt-unsplash" /><span></span></label></div>
+          <div class="row"><div><h4>Pexels</h4><p class="muted small">Needs an API key</p></div><label class="switch"><input type="checkbox" id="opt-pexels" /><span></span></label></div>
+          <div class="row"><div><h4>Wallhaven</h4><p class="muted small">No key needed</p></div><label class="switch"><input type="checkbox" id="opt-wallhaven" /><span></span></label></div>
+          <div class="row"><div><h4>Bing daily</h4><p class="muted small">No key needed</p></div><label class="switch"><input type="checkbox" id="opt-bing" /><span></span></label></div>
+        </div>
+      </section>
+
+      <!-- HISTORY -->
+      <section class="view" id="view-history">
+        <h2>History</h2>
+        <p class="muted small">Click any wallpaper to bring it back. Tray: right-click for Next / Previous.</p>
+        <div class="grid" id="history-grid"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <h2>Settings</h2>
+        <div class="card glass">
+          <h3>Appearance</h3>
+          <div class="row">
+            <div><h4>Theme</h4></div>
+            <div class="segmented" id="theme-seg">
+              <button data-theme="system">System</button>
+              <button data-theme="light">Light</button>
+              <button data-theme="dark">Dark</button>
+            </div>
+          </div>
+          <div class="row">
+            <div><h4>Wallpaper fit</h4></div>
+            <select id="opt-fit">
+              <option value="fill">Fill</option>
+              <option value="fit">Fit</option>
+              <option value="stretch">Stretch</option>
+              <option value="center">Center</option>
+              <option value="span">Span (multi-monitor)</option>
+              <option value="tile">Tile</option>
+            </select>
+          </div>
+        </div>
+        <div class="card glass">
+          <h3>API keys <span class="muted small">(optional)</span></h3>
+          <p class="muted small">Free keys from <a href="#" data-url="https://unsplash.com/oauth/applications">unsplash.com/developers</a> (Access Key) and <a href="#" data-url="https://www.pexels.com/api/">pexels.com/api</a>. Stored locally on this PC. Wallhaven and Bing work without any key.</p>
+          <label class="field"><span>Unsplash Access Key</span><input id="key-unsplash" type="password" spellcheck="false" /></label>
+          <label class="field"><span>Pexels API Key</span><input id="key-pexels" type="password" spellcheck="false" /></label>
+          <div class="right"><button class="btn primary" id="save-keys">Save keys</button></div>
+        </div>
+        <p class="muted small center">Photos courtesy of Unsplash and Pexels and their photographers.</p>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast glass" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
