@@ -30,10 +30,20 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": ["icons/icon.png", "icons/icon.ico"],
     "windows": {
       "nsis": {
         "installMode": "both"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMxQ0U0RTdGMDg2MkY1OTQKUldTVTlXSUlmMDdPd1IxVmp2TVMzUWo5dlUxWHFWbnBQRFYxa2RqWThidjM2LzJ1RnhlU0J1bVMK",
+      "endpoints": ["https://github.com/takdiras/wallflow/releases/latest/download/latest.json"],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

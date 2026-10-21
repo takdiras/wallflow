@@ -7,6 +7,7 @@ A small Windows wallpaper app written in Rust (Tauri 2). It pulls photos from **
 - **Manual**: Next and Previous buttons in the app or the tray icon. Next moves forward through history, or fetches a new random photo when you're already at the newest one.
 - **On startup**: optionally start with Windows (silently, in the tray) and set a fresh wallpaper at each sign-in.
 - **UI**: minimal glassmorphism over a blurred copy of the active wallpaper. The accent colour comes from the wallpaper, and there are light, dark and system themes.
+- **Updates**: the installed app checks GitHub for new releases and updates itself from **Settings → Updates** (or the tray). The portable exe links to the download instead.
 - **Tray**: left-click for the next wallpaper, double-click to open, right-click for Next / Previous / Auto-rotate / Quit. Closing the window hides it to the tray.
 
 ## API keys (optional, free)
@@ -27,7 +28,7 @@ cargo run
 
 Release exe: `cargo build --release` → `src-tauri/target/release/wallflow.exe`.
 
-To build an installer, run `cargo install tauri-cli --version "^2"` once, then `cargo tauri build` in `src-tauri`.
+To build an installer, run `cargo install tauri-cli --version "^2"` once, then `cargo tauri build` in `src-tauri`. The installer is signed for in-app updates, so set `TAURI_SIGNING_PRIVATE_KEY` to the updater private key first (CI uses the repository secret of the same name).
 
 ## Layout
 
@@ -38,6 +39,7 @@ To build an installer, run `cargo install tauri-cli --version "^2"` once, then `
 | `src-tauri/src/system.rs` | sets the wallpaper via `IDesktopWallpaper`, fit style, autostart (HKCU Run) |
 | `src-tauri/src/accent.rs` | picks the accent colour from the image |
 | `src-tauri/src/tray.rs` | tray icon and menu |
+| `src-tauri/src/update.rs` | in-app updates from GitHub releases |
 | `ui/` | HTML/CSS/JS front end (no build step) |
 
 Settings and history are stored in `%APPDATA%\dev.wallflow.app`. Downloaded wallpapers (the last 40) go in `Pictures\Wallflow`, because Windows refuses wallpaper files stored under AppData. Applying a wallpaper switches Windows out of Spotlight/slideshow mode.

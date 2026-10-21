@@ -338,6 +338,52 @@ $("#save-keys").onclick = async () => {
   $("#grid").innerHTML = "";
 };
 
+/* ---------- updates ---------- */
+
+let update = null;
+let updating = false;
+function renderUpdate() {
+  const btn = $("#update-btn");
+  $('.nav[data-view="settings"]').classList.toggle("has-update", !!update);
+  if (updating) return;
+  btn.disabled = false;
+  if (!update) {
+    btn.textContent = "Check for updates";
+    btn.classList.remove("primary");
+    return;
+  }
+  btn.textContent = update.installable ? `Update to ${update.version}` : "Download";
+  btn.classList.add("primary");
+  $("#update-status").textContent = update.installable
+    ? `Version ${update.version} is available. Wallflow restarts when it's done.`
+    : `Version ${update.version} is available. This portable copy can't update itself.`;
+}
+
+$("#update-btn").onclick = async () => {
+  const btn = $("#update-btn");
+  const status = $("#update-status");
+  btn.disabled = true;
+  if (update) {
+    updating = update.installable;
+    if (updating) status.textContent = "Downloading update…";
+    try {
+      await call("install_update");
+    } catch {
+      updating = false;
+    }
+    renderUpdate();
+    return;
+  }
+  btn.textContent = "Checking…";
+  try {
+    update = await call("check_update");
+    if (!update) status.textContent = "You're on the latest version.";
+  } catch {
+    status.textContent = "Couldn't reach GitHub. Try again later.";
+  }
+  renderUpdate();
+};
+
 /* ---------- links ---------- */
 
 document.addEventListener("click", (e) => {
@@ -364,5 +410,16 @@ window.show = show;
   listen("settings-changed", (e) => { settings = e.payload; renderSettings(); renderNow(); });
   listen("busy", (e) => document.body.classList.toggle("busy", e.payload));
   listen("error", (e) => toast(e.payload, true));
+
+  $("#app-version").textContent = await window.__TAURI__.app.getVersion();
+  update = await invoke("pending_update");
+  renderUpdate();
+  listen("update-available", (e) => {
+    if (update?.version !== e.payload.version) toast(`Wallflow ${e.payload.version} is available. See Settings.`);
+    update = e.payload;
+    renderUpdate();
+  });
+  listen("update-progress", (e) => { $("#update-status").textContent = `Downloading update… ${e.payload}%`; });
+  listen("open-view", (e) => show(e.payload));
   setInterval(() => settings?.rotate && renderNow(), 30000);
 })();

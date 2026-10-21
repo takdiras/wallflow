@@ -5,6 +5,7 @@ mod core;
 mod providers;
 mod system;
 mod tray;
+mod update;
 
 use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 
@@ -94,6 +95,21 @@ fn open_url(url: String) {
     system::open_url(&url);
 }
 
+#[tauri::command]
+fn pending_update(app: AppHandle) -> Option<update::UpdateInfo> {
+    update::pending(&app)
+}
+
+#[tauri::command]
+async fn check_update(app: AppHandle) -> Result<Option<update::UpdateInfo>, String> {
+    update::check(&app).await
+}
+
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    update::install(&app).await
+}
+
 fn main() {
     let autostarted = std::env::args().any(|a| a == system::AUTOSTART_ARG);
 
@@ -101,6 +117,8 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             tray::show_main(app)
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::default())
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,
@@ -110,13 +128,17 @@ fn main() {
             next_wallpaper,
             prev_wallpaper,
             goto_history,
-            open_url
+            open_url,
+            pending_update,
+            check_update,
+            install_update
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
             app.manage(AppState::load(&handle));
             tray::build(&handle)?;
             core::start_scheduler(handle.clone());
+            update::start_checker(handle.clone());
 
             if !autostarted {
                 tray::show_main(&handle);

@@ -35,6 +35,10 @@ jobs:
           node-version: 22
 
       - name: Build installer
+        # The key signs the installer for in-app updates (createUpdaterArtifacts).
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npx --yes @tauri-apps/cli@2 build --ci
 
       - name: Collect artifacts
@@ -46,6 +50,20 @@ jobs:
           Get-ChildItem dist | ForEach-Object {
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
           } | Set-Content dist/SHA256SUMS.txt
+
+          # Manifest the in-app updater reads from releases/latest/download/latest.json.
+          $setup = Get-Item "src-tauri/target/release/bundle/nsis/*_${env:VERSION}_x64-setup.exe"
+          @{
+            version  = $env:VERSION
+            notes    = "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = (Get-Content "$($setup.FullName).sig" -Raw).Trim()
+                url       = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$($setup.Name)"
+              }
+            }
+          } | ConvertTo-Json -Depth 4 | Set-Content dist/latest.json
           Get-ChildItem dist
 
       - name: Publish GitHub release

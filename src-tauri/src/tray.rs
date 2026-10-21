@@ -5,12 +5,14 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager, Wry};
 
 use crate::core::{self, AppState, Entry};
+use crate::update;
 
 const TRAY_ID: &str = "wallflow";
 
 pub struct TrayItems {
     pub rotate: CheckMenuItem<Wry>,
     pub title: MenuItem<Wry>,
+    pub update: MenuItem<Wry>,
 }
 
 pub fn show_main(app: &AppHandle) {
@@ -28,6 +30,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let prev = MenuItem::with_id(app, "prev", "Previous wallpaper", true, None::<&str>)?;
     let rotate =
         CheckMenuItem::with_id(app, "rotate", "Auto-rotate", true, rotate_on, None::<&str>)?;
+    let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
     let open = MenuItem::with_id(app, "open", "Open Wallflow", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let sep = || PredefinedMenuItem::separator(app);
@@ -40,6 +43,7 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &prev,
             &rotate,
             &sep()?,
+            &update,
             &open,
             &quit,
         ],
@@ -79,6 +83,18 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
                         st.settings.lock().unwrap().clone(),
                     );
                 }
+                "update" => {
+                    tauri::async_runtime::spawn(async move {
+                        let found = match update::pending(&app) {
+                            Some(_) => true,
+                            None => matches!(update::check(&app).await, Ok(Some(_))),
+                        };
+                        show_main(&app);
+                        if found {
+                            let _ = tauri::Emitter::emit(&app, "open-view", "settings");
+                        }
+                    });
+                }
                 "open" => show_main(&app),
                 "quit" => app.exit(0),
                 _ => {}
@@ -106,7 +122,11 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
 
-    app.manage(TrayItems { rotate, title });
+    app.manage(TrayItems {
+        rotate,
+        title,
+        update,
+    });
     Ok(())
 }
 
@@ -127,5 +147,15 @@ pub fn update(app: &AppHandle, entry: &Entry) {
     }
     if let Some(items) = app.try_state::<TrayItems>() {
         let _ = items.title.set_text(by);
+    }
+}
+
+pub fn set_update(app: &AppHandle, version: Option<&str>) {
+    let text = match version {
+        Some(v) => format!("Update to {v}…"),
+        None => "Check for updates".into(),
+    };
+    if let Some(items) = app.try_state::<TrayItems>() {
+        let _ = items.update.set_text(text);
     }
 }
