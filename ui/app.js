@@ -301,6 +301,10 @@ function renderSettings() {
   sel.value = String(s.interval_minutes);
   $("#opt-autostart").checked = s.launch_at_startup;
   $("#opt-startup-change").checked = s.change_on_startup;
+  // Only takes effect when Windows launches Wallflow at sign-in.
+  $("#opt-startup-change").disabled = !s.launch_at_startup;
+  $("#row-startup-change").classList.toggle("disabled", !s.launch_at_startup);
+  $("#startup-change-hint").hidden = s.launch_at_startup;
   $("#opt-unsplash").checked = s.use_unsplash;
   $("#opt-pexels").checked = s.use_pexels;
   $("#opt-wallhaven").checked = s.use_wallhaven;

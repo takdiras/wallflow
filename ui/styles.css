@@ -151,6 +151,8 @@ select option { background: var(--bg); color: var(--text); }
 .switch input:checked + span { background: var(--accent); }
 .switch input:checked + span::after { transform: translateX(18px); }
 .switch input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-soft); }
+.switch input:disabled + span { cursor: default; }
+.row.disabled h3, .row.disabled .switch { opacity: .45; }
 
 /* Cards */
 .card { border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
