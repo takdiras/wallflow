@@ -167,6 +167,7 @@ impl AppState {
         }
         let _ = std::fs::remove_dir(dir.join("wallpapers")); // only succeeds once empty
         history.entries.retain(|e| e.path.exists());
+        sweep_images(&images, &history.entries);
         history.index = history.index.min(history.entries.len().saturating_sub(1));
         let last = history
             .entries
@@ -295,6 +296,25 @@ async fn download_and_set(app: &AppHandle, photo: Photo) -> Result<(), String> {
     Ok(())
 }
 
+/// Delete images no history entry points to (failed applies, lost history,
+/// failed deletes). Only our own jpg/png files, in case the user put others here.
+fn sweep_images(images: &std::path::Path, entries: &[Entry]) {
+    let Ok(files) = std::fs::read_dir(images) else {
+        return;
+    };
+    for path in files.flatten().map(|f| f.path()) {
+        let ours = path
+            .extension()
+            .is_some_and(|x| x.eq_ignore_ascii_case("jpg") || x.eq_ignore_ascii_case("png"));
+        let used = entries
+            .iter()
+            .any(|e| e.path.file_name() == path.file_name());
+        if ours && !used && path.is_file() {
+            let _ = std::fs::remove_file(&path);
+        }
+    }
+}
+
 async fn run<F, Fut>(app: &AppHandle, f: F) -> Result<Snapshot, String>
 where
     F: FnOnce() -> Fut,
@@ -306,6 +326,9 @@ where
     };
     let _ = app.emit("busy", true);
     let r = f().await;
+    // Still under the busy lock, so no download is in flight.
+    let entries = st.history.lock().unwrap().entries.clone();
+    sweep_images(&st.images, &entries);
     drop(_guard);
     let _ = app.emit("busy", false);
     if let Err(e) = &r {
