@@ -17,7 +17,11 @@ fn get_settings(state: State<AppState>) -> Settings {
 }
 
 #[tauri::command]
-fn save_settings(app: AppHandle, state: State<AppState>, settings: Settings) -> Result<Settings, String> {
+fn save_settings(
+    app: AppHandle,
+    state: State<AppState>,
+    settings: Settings,
+) -> Result<Settings, String> {
     let mut settings = settings;
     settings.interval_minutes = settings.interval_minutes.clamp(1, 7 * 24 * 60);
     settings.categories = settings
@@ -52,7 +56,12 @@ fn get_state(state: State<AppState>) -> Snapshot {
 }
 
 #[tauri::command]
-async fn browse(state: State<'_, AppState>, source: Option<Source>, query: String, page: u32) -> Result<Vec<Photo>, String> {
+async fn browse(
+    state: State<'_, AppState>,
+    source: Option<Source>,
+    query: String,
+    page: u32,
+) -> Result<Vec<Photo>, String> {
     let (keys, sources) = {
         let s = state.settings.lock().unwrap();
         (s.keys(), s.enabled_sources())
@@ -89,7 +98,9 @@ fn main() {
     let autostarted = std::env::args().any(|a| a == system::AUTOSTART_ARG);
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main(app)))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            tray::show_main(app)
+        }))
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,

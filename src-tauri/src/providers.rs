@@ -57,7 +57,11 @@ impl Photo {
     }
 
     pub fn extension(&self) -> &'static str {
-        if self.full.to_lowercase().ends_with(".png") { "png" } else { "jpg" }
+        if self.full.to_lowercase().ends_with(".png") {
+            "png"
+        } else {
+            "jpg"
+        }
     }
 
     pub fn key(&self) -> String {
@@ -100,7 +104,11 @@ fn u(v: &Value, key: &str) -> u32 {
 fn unsplash_photo(v: &Value) -> Photo {
     let desc = {
         let d = s(v, &["alt_description"]);
-        if d.is_empty() { s(v, &["description"]) } else { d }
+        if d.is_empty() {
+            s(v, &["description"])
+        } else {
+            d
+        }
     };
     Photo {
         id: s(v, &["id"]),
@@ -111,8 +119,14 @@ fn unsplash_photo(v: &Value) -> Photo {
         width: u(v, "width"),
         height: u(v, "height"),
         author: s(v, &["user", "name"]),
-        author_url: format!("{}?utm_source=wallflow&utm_medium=referral", s(v, &["user", "links", "html"])),
-        page_url: format!("{}?utm_source=wallflow&utm_medium=referral", s(v, &["links", "html"])),
+        author_url: format!(
+            "{}?utm_source=wallflow&utm_medium=referral",
+            s(v, &["user", "links", "html"])
+        ),
+        page_url: format!(
+            "{}?utm_source=wallflow&utm_medium=referral",
+            s(v, &["links", "html"])
+        ),
         color: s(v, &["color"]),
         description: desc,
         download_location: Some(s(v, &["links", "download_location"])).filter(|x| !x.is_empty()),
@@ -150,7 +164,11 @@ fn wallhaven_photo(v: &Value) -> Photo {
         author: "Wallhaven".into(),
         author_url: s(v, &["url"]),
         page_url: s(v, &["url"]),
-        color: v["colors"].get(0).and_then(|c| c.as_str()).unwrap_or("#808080").into(),
+        color: v["colors"]
+            .get(0)
+            .and_then(|c| c.as_str())
+            .unwrap_or("#808080")
+            .into(),
         description: format!("Wallhaven wallpaper · {}", res.replace('x', " × ")),
         download_location: None,
         id,
@@ -188,12 +206,18 @@ async fn wallhaven(client: &Client, params: &str) -> Result<Vec<Photo>, String> 
         "{WALLHAVEN_API}/search?categories=100&purity=100&atleast=1920x1080&ratios=landscape&{params}"
     );
     let v = get_json(client, &url, None).await?;
-    Ok(v["data"].as_array().map(|a| a.iter().map(wallhaven_photo).collect()).unwrap_or_default())
+    Ok(v["data"]
+        .as_array()
+        .map(|a| a.iter().map(wallhaven_photo).collect())
+        .unwrap_or_default())
 }
 
 async fn bing(client: &Client) -> Result<Vec<Photo>, String> {
     let v = get_json(client, &format!("{BING_API}&idx=0"), None).await?;
-    Ok(v["images"].as_array().map(|a| a.iter().map(bing_photo).collect()).unwrap_or_default())
+    Ok(v["images"]
+        .as_array()
+        .map(|a| a.iter().map(bing_photo).collect())
+        .unwrap_or_default())
 }
 
 async fn get_json(client: &Client, url: &str, auth: Option<String>) -> Result<Value, String> {
@@ -213,7 +237,10 @@ async fn get_json(client: &Client, url: &str, auth: Option<String>) -> Result<Va
             429 => " (rate limit reached, try again later)",
             _ => "",
         };
-        return Err(format!("API error {status}{hint}: {}", body.chars().take(160).collect::<String>()));
+        return Err(format!(
+            "API error {status}{hint}: {}",
+            body.chars().take(160).collect::<String>()
+        ));
     }
     resp.json().await.map_err(|e| format!("Bad response: {e}"))
 }
@@ -221,7 +248,9 @@ async fn get_json(client: &Client, url: &str, auth: Option<String>) -> Result<Va
 fn enc(q: &str) -> String {
     q.bytes()
         .map(|b| match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
             b' ' => "+".into(),
             _ => format!("%{b:02X}"),
         })
@@ -229,7 +258,14 @@ fn enc(q: &str) -> String {
 }
 
 /// Fetch one page from a single source. Empty query = its recommended feed.
-async fn fetch(client: &Client, keys: &Keys, src: Source, q: &str, page: u32, per_page: u32) -> Result<Vec<Photo>, String> {
+async fn fetch(
+    client: &Client,
+    keys: &Keys,
+    src: Source,
+    q: &str,
+    page: u32,
+    per_page: u32,
+) -> Result<Vec<Photo>, String> {
     match src {
         Source::Unsplash => {
             let key = keys.unsplash.as_ref().ok_or("Unsplash needs an API key")?;
@@ -243,7 +279,10 @@ async fn fetch(client: &Client, keys: &Keys, src: Source, q: &str, page: u32, pe
             };
             let v = get_json(client, &url, Some(format!("Client-ID {key}"))).await?;
             let arr = if q.is_empty() { &v } else { &v["results"] };
-            Ok(arr.as_array().map(|a| a.iter().map(unsplash_photo).collect()).unwrap_or_default())
+            Ok(arr
+                .as_array()
+                .map(|a| a.iter().map(unsplash_photo).collect())
+                .unwrap_or_default())
         }
         Source::Pexels => {
             let key = keys.pexels.as_ref().ok_or("Pexels needs an API key")?;
@@ -253,13 +292,20 @@ async fn fetch(client: &Client, keys: &Keys, src: Source, q: &str, page: u32, pe
                 format!("{PEXELS_API}/search?query={}&per_page={per_page}&page={page}&orientation=landscape", enc(q))
             };
             let v = get_json(client, &url, Some(key.clone())).await?;
-            Ok(v["photos"].as_array().map(|a| a.iter().map(pexels_photo).collect()).unwrap_or_default())
+            Ok(v["photos"]
+                .as_array()
+                .map(|a| a.iter().map(pexels_photo).collect())
+                .unwrap_or_default())
         }
         Source::Wallhaven => {
             if q.is_empty() {
                 wallhaven(client, &format!("sorting=toplist&topRange=1M&page={page}")).await
             } else {
-                wallhaven(client, &format!("q={}&sorting=relevance&page={page}", enc(q))).await
+                wallhaven(
+                    client,
+                    &format!("q={}&sorting=relevance&page={page}", enc(q)),
+                )
+                .await
             }
         }
         // Bing only has the last few daily images: one page, no search.
@@ -331,7 +377,10 @@ pub async fn random(
         let (src, cat) = {
             let mut rng = rand::thread_rng();
             let src = *sources.choose(&mut rng).unwrap();
-            let cat = categories.choose(&mut rng).cloned().unwrap_or_else(|| "wallpaper".into());
+            let cat = categories
+                .choose(&mut rng)
+                .cloned()
+                .unwrap_or_else(|| "wallpaper".into());
             (src, cat)
         };
         let result = match src {
@@ -343,13 +392,19 @@ pub async fn random(
                 );
                 get_json(client, &url, Some(format!("Client-ID {key}")))
                     .await
-                    .map(|v| v.as_array().map(|a| a.iter().map(unsplash_photo).collect::<Vec<_>>()).unwrap_or_default())
+                    .map(|v| {
+                        v.as_array()
+                            .map(|a| a.iter().map(unsplash_photo).collect::<Vec<_>>())
+                            .unwrap_or_default()
+                    })
             }
             Source::Pexels => {
                 let page = rand::thread_rng().gen_range(1..=8);
                 fetch(client, keys, src, &cat, page, 40).await
             }
-            Source::Wallhaven => wallhaven(client, &format!("q={}&sorting=random", enc(&cat))).await,
+            Source::Wallhaven => {
+                wallhaven(client, &format!("q={}&sorting=random", enc(&cat))).await
+            }
             Source::Bing => bing(client).await,
         };
         match result {
@@ -372,7 +427,13 @@ pub async fn random(
 
 /// Unsplash API guideline: trigger the download endpoint when a photo is used.
 pub async fn track_download(client: &Client, keys: &Keys, photo: &Photo) {
-    if let (Source::Unsplash, Some(loc), Some(key)) = (photo.source, &photo.download_location, &keys.unsplash) {
-        let _ = client.get(loc).header("Authorization", format!("Client-ID {key}")).send().await;
+    if let (Source::Unsplash, Some(loc), Some(key)) =
+        (photo.source, &photo.download_location, &keys.unsplash)
+    {
+        let _ = client
+            .get(loc)
+            .header("Authorization", format!("Client-ID {key}"))
+            .send()
+            .await;
     }
 }

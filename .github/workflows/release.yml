@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches app version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $cargo = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
+          if ($tag -ne $conf -or $tag -ne $cargo) {
+            throw "Tag v$tag doesn't match tauri.conf.json ($conf) / Cargo.toml ($cargo)"
+          }
+          "VERSION=$tag" >> $env:GITHUB_ENV
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build installer
+        run: npx --yes @tauri-apps/cli@2 build --ci
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item "src-tauri/target/release/bundle/nsis/*-setup.exe" dist/
+          Copy-Item src-tauri/target/release/wallflow.exe "dist/Wallflow_${env:VERSION}_x64_portable.exe"
+          Get-ChildItem dist | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content dist/SHA256SUMS.txt
+          Get-ChildItem dist
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          ## Download
+
+          - **Wallflow_${env:VERSION}_x64-setup.exe**: installer (Start menu entry, uninstaller)
+          - **Wallflow_${env:VERSION}_x64_portable.exe**: single exe, no install needed
+
+          Requires Windows 10/11 with WebView2 (preinstalled on Windows 11).
+          The builds are not code-signed yet, so SmartScreen may show "Windows protected your PC". Click **More info → Run anyway**.
+          "@
+          gh release create "${{ github.ref_name }}" (Get-ChildItem dist).FullName `
+            --title "Wallflow ${env:VERSION}" `
+            --notes $notes `
+            --generate-notes

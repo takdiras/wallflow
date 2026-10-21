@@ -26,11 +26,24 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     let title = MenuItem::with_id(app, "title", "Wallflow", false, None::<&str>)?;
     let next = MenuItem::with_id(app, "next", "Next wallpaper", true, None::<&str>)?;
     let prev = MenuItem::with_id(app, "prev", "Previous wallpaper", true, None::<&str>)?;
-    let rotate = CheckMenuItem::with_id(app, "rotate", "Auto-rotate", true, rotate_on, None::<&str>)?;
+    let rotate =
+        CheckMenuItem::with_id(app, "rotate", "Auto-rotate", true, rotate_on, None::<&str>)?;
     let open = MenuItem::with_id(app, "open", "Open Wallflow", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let sep = || PredefinedMenuItem::separator(app);
-    let menu = Menu::with_items(app, &[&title, &sep()?, &next, &prev, &rotate, &sep()?, &open, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &title,
+            &sep()?,
+            &next,
+            &prev,
+            &rotate,
+            &sep()?,
+            &open,
+            &quit,
+        ],
+    )?;
 
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(app.default_window_icon().cloned().expect("app icon"))
@@ -41,10 +54,14 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             let app = app.clone();
             match ev.id().as_ref() {
                 "next" => {
-                    tauri::async_runtime::spawn(async move { let _ = core::next(&app).await; });
+                    tauri::async_runtime::spawn(async move {
+                        let _ = core::next(&app).await;
+                    });
                 }
                 "prev" => {
-                    tauri::async_runtime::spawn(async move { let _ = core::prev(&app).await; });
+                    tauri::async_runtime::spawn(async move {
+                        let _ = core::prev(&app).await;
+                    });
                 }
                 "rotate" => {
                     let st = app.state::<AppState>();
@@ -56,7 +73,11 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
                     st.save_settings();
                     sync_rotate(&app);
                     core::emit_state(&app);
-                    let _ = tauri::Emitter::emit(&app, "settings-changed", st.settings.lock().unwrap().clone());
+                    let _ = tauri::Emitter::emit(
+                        &app,
+                        "settings-changed",
+                        st.settings.lock().unwrap().clone(),
+                    );
                 }
                 "open" => show_main(&app),
                 "quit" => app.exit(0),
@@ -66,11 +87,20 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
         .on_tray_icon_event(|tray, ev| {
             // Left click = next wallpaper, double click = open window, right click = menu.
             match ev {
-                TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } => {
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } => {
                     let app = tray.app_handle().clone();
-                    tauri::async_runtime::spawn(async move { let _ = core::next(&app).await; });
+                    tauri::async_runtime::spawn(async move {
+                        let _ = core::next(&app).await;
+                    });
                 }
-                TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => show_main(tray.app_handle()),
+                TrayIconEvent::DoubleClick {
+                    button: MouseButton::Left,
+                    ..
+                } => show_main(tray.app_handle()),
                 _ => {}
             }
         })
@@ -88,7 +118,10 @@ pub fn sync_rotate(app: &AppHandle) {
 }
 
 pub fn update(app: &AppHandle, entry: &Entry) {
-    let by = format!("Photo by {} on {:?}", entry.photo.author, entry.photo.source);
+    let by = format!(
+        "Photo by {} on {:?}",
+        entry.photo.author, entry.photo.source
+    );
     if let Some(tray) = app.tray_by_id(TRAY_ID) {
         let _ = tray.set_tooltip(Some(format!("Wallflow\n{by}")));
     }

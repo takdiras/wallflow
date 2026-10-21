@@ -23,14 +23,21 @@ fn rgb_to_hsv(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
 /// Returns `#rrggbb`. Buckets pixels by hue and picks the bucket with the most
 /// "colourful mass" so a small vivid area can beat a large grey one.
 pub fn from_file(path: &Path) -> Option<String> {
-    let img = image::open(path).ok()?.resize(96, 96, FilterType::Triangle).to_rgb8();
+    let img = image::open(path)
+        .ok()?
+        .resize(96, 96, FilterType::Triangle)
+        .to_rgb8();
     const BUCKETS: usize = 24;
     let mut weight = [0f32; BUCKETS];
     let mut sum = [[0f32; 3]; BUCKETS];
     let mut gray = [0f32; 4];
 
     for p in img.pixels() {
-        let (r, g, b) = (p[0] as f32 / 255.0, p[1] as f32 / 255.0, p[2] as f32 / 255.0);
+        let (r, g, b) = (
+            p[0] as f32 / 255.0,
+            p[1] as f32 / 255.0,
+            p[2] as f32 / 255.0,
+        );
         let (h, s, v) = rgb_to_hsv(r, g, b);
         gray[0] += r;
         gray[1] += g;
@@ -47,7 +54,10 @@ pub fn from_file(path: &Path) -> Option<String> {
         sum[i][2] += b * w;
     }
 
-    let (best, &bw) = weight.iter().enumerate().max_by(|a, b| a.1.total_cmp(b.1))?;
+    let (best, &bw) = weight
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.total_cmp(b.1))?;
     let (r, g, b) = if bw > 1.0 {
         (sum[best][0] / bw, sum[best][1] / bw, sum[best][2] / bw)
     } else {

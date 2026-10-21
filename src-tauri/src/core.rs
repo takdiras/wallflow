@@ -56,7 +56,10 @@ impl Default for Settings {
 impl Settings {
     pub fn keys(&self) -> Keys {
         let k = |s: &str| Some(s.trim().to_string()).filter(|s| !s.is_empty());
-        Keys { unsplash: k(&self.unsplash_key), pexels: k(&self.pexels_key) }
+        Keys {
+            unsplash: k(&self.unsplash_key),
+            pexels: k(&self.pexels_key),
+        }
     }
     pub fn enabled_sources(&self) -> Vec<Source> {
         let mut v = Vec::new();
@@ -113,11 +116,17 @@ pub struct AppState {
 }
 
 pub fn now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn read_json<T: for<'de> Deserialize<'de> + Default>(path: &PathBuf) -> T {
-    std::fs::read_to_string(path).ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
 }
 
 fn write_json<T: Serialize>(path: &PathBuf, v: &T) {
@@ -131,7 +140,10 @@ fn write_json<T: Serialize>(path: &PathBuf, v: &T) {
 
 impl AppState {
     pub fn load(app: &AppHandle) -> Self {
-        let dir = app.path().app_data_dir().unwrap_or_else(|_| std::env::temp_dir().join("Wallflow"));
+        let dir = app
+            .path()
+            .app_data_dir()
+            .unwrap_or_else(|_| std::env::temp_dir().join("Wallflow"));
         let _ = std::fs::create_dir_all(&dir);
         // Images live in Pictures: the shell refuses wallpapers stored under the
         // app's AppData folder (IDesktopWallpaper returns "file not found").
@@ -156,7 +168,11 @@ impl AppState {
         let _ = std::fs::remove_dir(dir.join("wallpapers")); // only succeeds once empty
         history.entries.retain(|e| e.path.exists());
         history.index = history.index.min(history.entries.len().saturating_sub(1));
-        let last = history.entries.get(history.index).map(|e| e.set_at).unwrap_or(0);
+        let last = history
+            .entries
+            .get(history.index)
+            .map(|e| e.set_at)
+            .unwrap_or(0);
         Self {
             settings: Mutex::new(settings),
             history: Mutex::new(history),
@@ -173,17 +189,25 @@ impl AppState {
     }
 
     pub fn save_settings(&self) {
-        write_json(&self.dir.join("settings.json"), &*self.settings.lock().unwrap());
+        write_json(
+            &self.dir.join("settings.json"),
+            &*self.settings.lock().unwrap(),
+        );
     }
 
     fn save_history(&self) {
-        write_json(&self.dir.join("history.json"), &*self.history.lock().unwrap());
+        write_json(
+            &self.dir.join("history.json"),
+            &*self.history.lock().unwrap(),
+        );
     }
 
     pub fn snapshot(&self) -> Snapshot {
         let h = self.history.lock().unwrap();
         let s = self.settings.lock().unwrap();
-        let next_change_at = s.rotate.then(|| *self.last_change.lock().unwrap() + s.interval_minutes.max(1) as u64 * 60);
+        let next_change_at = s
+            .rotate
+            .then(|| *self.last_change.lock().unwrap() + s.interval_minutes.max(1) as u64 * 60);
         Snapshot {
             current: h.entries.get(h.index).cloned(),
             index: h.index,
@@ -228,7 +252,9 @@ async fn download_and_set(app: &AppHandle, photo: Photo) -> Result<(), String> {
         .await
         .map_err(|e| format!("Download failed: {e}"))?;
 
-    let path = st.images.join(format!("{}.{}", photo.key(), photo.extension()));
+    let path = st
+        .images
+        .join(format!("{}.{}", photo.key(), photo.extension()));
     std::fs::write(&path, &bytes).map_err(|e| format!("Could not save image: {e}"))?;
     providers::track_download(&st.client, &keys, &photo).await;
 
@@ -239,7 +265,12 @@ async fn download_and_set(app: &AppHandle, photo: Photo) -> Result<(), String> {
         .flatten()
         .unwrap_or_else(|| photo.color.clone());
 
-    let entry = Entry { photo, path, accent: color, set_at: now() };
+    let entry = Entry {
+        photo,
+        path,
+        accent: color,
+        set_at: now(),
+    };
     apply(app, &entry)?;
 
     let removed = {
@@ -310,7 +341,14 @@ pub async fn next(app: &AppHandle) -> Result<Snapshot, String> {
             let s = st.settings.lock().unwrap();
             (s.keys(), s.enabled_sources(), s.categories.clone())
         };
-        let avoid: Vec<String> = st.history.lock().unwrap().entries.iter().map(|e| e.photo.key()).collect();
+        let avoid: Vec<String> = st
+            .history
+            .lock()
+            .unwrap()
+            .entries
+            .iter()
+            .map(|e| e.photo.key())
+            .collect();
         let photo = providers::random(&st.client, &keys, &sources, &cats, &avoid).await?;
         download_and_set(app, photo).await
     })

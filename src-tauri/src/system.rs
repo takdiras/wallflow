@@ -4,7 +4,7 @@ use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetSystemMetrics, SystemParametersInfoW, SM_CXVIRTUALSCREEN, SM_CXSCREEN, SPIF_SENDCHANGE,
+    GetSystemMetrics, SystemParametersInfoW, SM_CXSCREEN, SM_CXVIRTUALSCREEN, SPIF_SENDCHANGE,
     SPIF_UPDATEINIFILE, SPI_SETDESKWALLPAPER,
 };
 use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
@@ -15,8 +15,18 @@ const APP_NAME: &str = "Wallflow";
 pub const AUTOSTART_ARG: &str = "--autostart";
 
 pub fn screen_width(span: bool) -> u32 {
-    let w = unsafe { GetSystemMetrics(if span { SM_CXVIRTUALSCREEN } else { SM_CXSCREEN }) };
-    if w > 0 { w as u32 } else { 2560 }
+    let w = unsafe {
+        GetSystemMetrics(if span {
+            SM_CXVIRTUALSCREEN
+        } else {
+            SM_CXSCREEN
+        })
+    };
+    if w > 0 {
+        w as u32
+    } else {
+        2560
+    }
 }
 
 /// (WallpaperStyle, TileWallpaper) registry values for each fit mode.
@@ -33,7 +43,8 @@ fn style_values(fit: &str) -> (&'static str, &'static str) {
 
 pub fn set_wallpaper(path: &Path, fit: &str) -> Result<(), String> {
     let (style, tile) = style_values(fit);
-    if let Ok((desk, _)) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(r"Control Panel\Desktop") {
+    if let Ok((desk, _)) = RegKey::predef(HKEY_CURRENT_USER).create_subkey(r"Control Panel\Desktop")
+    {
         let _ = desk.set_value("WallpaperStyle", &style);
         let _ = desk.set_value("TileWallpaper", &tile);
     }
@@ -42,7 +53,12 @@ pub fn set_wallpaper(path: &Path, fit: &str) -> Result<(), String> {
     let (p, f) = (path.to_path_buf(), fit.to_string());
     match std::thread::spawn(move || set_via_com(&p, &f)).join() {
         Ok(Ok(())) => {}
-        Ok(Err(e)) => return Err(format!("Windows couldn't apply the wallpaper: {}", e.message())),
+        Ok(Err(e)) => {
+            return Err(format!(
+                "Windows couldn't apply the wallpaper: {}",
+                e.message()
+            ))
+        }
         Err(_) => set_via_spi(path)?,
     }
     // Leave Spotlight / slideshow mode so it doesn't replace our image later.
@@ -108,7 +124,10 @@ fn set_via_spi(path: &Path) -> Result<(), String> {
         )
     };
     if ok == 0 {
-        Err(format!("Windows refused to set the wallpaper: {}", std::io::Error::last_os_error()))
+        Err(format!(
+            "Windows refused to set the wallpaper: {}",
+            std::io::Error::last_os_error()
+        ))
     } else {
         Ok(())
     }
